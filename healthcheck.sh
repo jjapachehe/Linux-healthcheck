@@ -16,20 +16,19 @@ fi
 banner()
 {
     echo "+-----------------------------------------------------------------------+"
-    printf "| %-40s |\n"
-    printf "|\t   $@    \n"
-    echo "|"
+    printf "\t\t   $@ \t\t\t   \n"
     echo "+-----------------------------------------------------------------------+"
 }
 
 separator() 
 {
-    echo "***********************************************************************"
+    echo "************************************************************************"
 }
 
 #start
 echo "*************************************************************************" 
 echo "*                        Health Check $(hostname)                     *"
+echo "*                                                                       *"
 echo "*************************************************************************"
 
 #system information
@@ -54,15 +53,15 @@ separator
 printf "\t\tTop process using Memory\n"
 ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head
 banner "NTP and synchronization"
-printf "NTP information:\t\t"; ntpstat | awk 'NR==1 {print $0}'
+printf "NTP information:\t"; ntpstat | awk 'NR==1 {print $0}'
 printf "NTP lead field:\t\t"; ntpq -c rv | awk 'NR==1 {print $3}'
 separator
 printf "\t\t Time and Date status\n"
 timedatectl
 banner "Network interfaces"
 separator
-printf "Bonding information"
+printf "Bonding information\n"
 ip link show | grep "bond.*:" | grep UP | awk -F":" '{print $2}'
 separator
-printf "\t\tNetwork interface statistics"
+printf "\t\tNetwork interface statistics\n"
 netstat -i | grep -v ^lo | column -t
