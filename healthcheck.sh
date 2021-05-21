@@ -7,7 +7,7 @@
 #Global variables
 date=$(date +"%Y%m%d")
 
-#check mmsuper user
+#check root user
 if [ "$(whoami)" != "root" ]; then
     echo "Use mmsuper to execute"
     exit 1
@@ -59,9 +59,19 @@ separator
 printf "\t\t Time and Date status\n"
 timedatectl
 banner "Network interfaces"
+printf "\t\tIP information"
+ifconfig|grep "inet " | column -t
+printf "Network RX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4} END {print sum}'
+printf "Network TX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $8} END {print sum}'
 separator
 printf "Bonding information\n"
 ip link show | grep "bond.*:" | grep UP | awk -F":" '{print $2}'
 separator
 printf "\t\tNetwork interface statistics\n"
 netstat -i | grep -v ^lo | column -t
+separator
+printf "\t\tCurrent bandwidth usage\n"
+for interface in $(ip link show | awk '{print $2}' | grep -v '^[0-9]' | grep -v "@"| sed 's/:$//')
+do
+    printf "${interface}: "; sar 1 1 -n DEV | grep ${interface} | grep -v ^Average | tail -1 | awk '{print $6+$7 " Mb"}'
+done
