@@ -9,7 +9,7 @@ date=$(date +"%Y%m%d")
 
 #check root user
 if [ "$(whoami)" != "root" ]; then
-    echo "Use mmsuper to execute"
+    echo "Use root to execute"
     exit 1
 fi
 
