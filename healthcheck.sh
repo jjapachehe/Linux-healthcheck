@@ -22,7 +22,7 @@ banner()
 
 separator() 
 {
-    echo "************************************************************************"
+    echo -e "\n************************************************************************"
 }
 
 #start
@@ -47,10 +47,10 @@ printf "Swap used:\t\t"; vmstat -s | grep -w "used swap" | awk '{printf(" %.0f G
 printf "Load average:\t\t"; uptime|grep -o "load average.*"|awk '{print " "$3" " $4" " $5}'
 printf "CPU usage:\t\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Average://g" | grep -w "all" | awk '{print $NF}' | awk -F'.' '{print (" "100 -$1 "%")}'
 separator
-printf "\t\tTop process using CPU\n"
+printf "\t\tTop process CPU\n"
 ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
 separator
-printf "\t\tTop process using Memory\n"
+printf "\t\tTop process Memory\n"
 ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head
 banner "NTP and synchronization"
 printf "NTP information:\t"; ntpstat | awk 'NR==1 {print $0}'
@@ -59,7 +59,7 @@ separator
 printf "\t\t Time and Date status\n"
 timedatectl
 banner "Network interfaces"
-printf "\t\tIP information"
+printf "\t\tIP information\n"
 ifconfig|grep "inet " | column -t
 printf "Network RX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4} END {print sum}'
 printf "Network TX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $8} END {print sum}'
@@ -75,3 +75,18 @@ for interface in $(ip link show | awk '{print $2}' | grep -v '^[0-9]' | grep -v 
 do
     printf "${interface}: "; sar 1 1 -n DEV | grep ${interface} | grep -v ^Average | tail -1 | awk '{print $6+$7 " Mb"}'
 done
+banner "Filesystem and disk information"
+printf "\t\tFilesystem > 75 percent usage:\n\n"
+for i in $(df -Ph|egrep -v "^Filesystem|mnt" | awk '{print $5"," $6}' | sort -nr) 
+do 
+    if [ `echo $i| awk -F "," '{print $1}' | sed 's/%$//'` -gt 75 ]; then
+        echo $i| awk -F "," '{if ($1 >=80) print $1 " " $2}'
+    else
+        echo "All FS are under 75%"
+        break
+    fi
+done
+separator
+printf "\t\t Disk Usage output\n"
+df -Ph
+
