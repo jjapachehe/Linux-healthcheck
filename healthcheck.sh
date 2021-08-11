@@ -1,17 +1,12 @@
 #!/bin/bash
-#######################################
-## name:            healthcheck      ##
-## author:          jjapache         ##
-#######################################
+#########################################
+## name:            Linux healthcheck  ##
+## author:          jjapachehe         ##
+#########################################
 
 #Global variables
 date=$(date +"%Y%m%d")
-
-#check root user
-if [ "$(whoami)" != "root" ]; then
-    echo "Use root to execute"
-    exit 1
-fi
+date_format=$(date +"%Y/%m/%d")
 
 banner()
 {
@@ -27,15 +22,15 @@ separator()
 
 #start
 echo "*************************************************************************" 
-echo "*                        Health Check $(hostname)                     *"
-echo "*                                                                       *"
+echo "                         Health Check $(hostname)                       "
+echo "                                                                        "
 echo "*************************************************************************"
 
 #system information
 banner "Node Information"
 hostnamectl
 uptime=$(uptime|sed 's/.*up \([^,]*\), .*/\1/'); printf "\t    Uptime: $uptime\n"
-last_reboot=$(sudo last reboot | awk 'NR==3 {print $3 " " $4 " " $5 " " $6 " " $7}'); printf "       last reboot: $last_reboot\n"
+last_reboot=$(sudo last reboot | awk 'NR==2 {print $3 " " $4 " " $5 " " $6 " " $7}'); printf "       last reboot: $last_reboot\n"
 banner "Memory and CPU Usage"
 printf "Total RAM:\t\t"; grep MemTotal /proc/meminfo| awk '{printf(" %.0f GB\n", $2/1024/1024)}'
 printf "Memory free:\t\t"; grep MemFree /proc/meminfo| awk '{printf(" %.0f GB\n", $2/1024/1024)}'
@@ -48,23 +43,24 @@ printf "Load average:\t\t"; uptime|grep -o "load average.*"|awk '{print " "$3" "
 printf "CPU usage:\t\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Average://g" | grep -w "all" | awk '{print $NF}' | awk -F'.' '{print (" "100 -$1 "%")}'
 separator
 printf "\t\tTop process CPU\n"
-ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
+ps -eo pid,ppid,cmd,%cpu --sort=-%cpu | head
 separator
 printf "\t\tTop process Memory\n"
-ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head
+ps -eo pid,ppid,cmd,%mem --sort=-%mem | head
 banner "NTP and synchronization"
 printf "NTP information:\t"; ntpstat | awk 'NR==1 {print $0}'
 printf "NTP lead field:\t\t"; ntpq -c rv | awk 'NR==1 {print $3}'
+printf "NTP reach value:\t\t"; ntpq -p | awk 'NR==4 {print $7}'
 separator
 printf "\t\t Time and Date status\n"
 timedatectl
 banner "Network interfaces"
 printf "\t\tIP information\n"
 ifconfig|grep "inet " | column -t
-printf "Network RX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4} END {print sum}'
+printf "\nNetwork RX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4} END {print sum}'
 printf "Network TX-ERR:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $8} END {print sum}'
 separator
-printf "Bonding information\n"
+printf "\t\tBonding information\n"
 ip link show | grep "bond.*:" | grep UP | awk -F":" '{print $2}'
 separator
 printf "\t\tNetwork interface statistics\n"
@@ -75,7 +71,10 @@ for interface in $(ip link show | awk '{print $2}' | grep -v '^[0-9]' | grep -v 
 do
     printf "${interface}: "; sar 1 1 -n DEV | grep ${interface} | grep -v ^Average | tail -1 | awk '{print $6+$7 " Mb"}'
 done
-banner "Filesystem and disk information"
+separator
+printf "\t\t static routes\n"
+route -n
+banner "Filesystem and Disk information"
 printf "\t\tFilesystem > 75 percent usage:\n\n"
 for i in $(df -Ph|egrep -v "^Filesystem|mnt" | awk '{print $5"," $6}' | sort -nr) 
 do 
@@ -87,6 +86,13 @@ do
     fi
 done
 separator
-printf "\t\t Disk Usage output\n"
-df -Ph
 
+printf "\n\n\t\t HealthChek Summary Report\n\n"
+printf "Time UP:\t\t"; uptime|sed 's/.*up \([^,]*\), .*/\1/' | awk '{if ($1 > 0) print "HEALTHY"; else print "WARNING"}'
+printf "CPU Utilization:\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Average://g" | grep -w "all" | awk '{print $NF}' | awk -F'.' '{print(100 -$1)}' | awk '{if($1 < 70) print "HEALTHY"; else print "WARNING"}'
+printf "Memory Utilization:\t"; vmstat -s | grep -w "used memory" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 700) print "HEALTHY"; else print "WARNING"}'
+printf "SWAP Usage:\t\t"; vmstat -s | grep -w "used swap" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 20) print "HEALTHY"; else print "WARNING" }'
+printf "NTP Sincronization:\t"; ntpq -p | awk 'NR==4 {print $7}' | awk '{if($1 == 377) print "HEALTHY"; else print "WARNING"}'
+printf "Network Errors:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4;sum += $8} END {print sum}' | awk '{if($1 == 0) print "HEALTHY"; else print "WARNING"}'
+printf "Disk Space Usage:\t"; df -Ph|egrep -v "^Filesystem|mnt|tmp" | awk '{print $5,$6}' |sort -n |tail -1 | awk '{if($1 <=80) print "HEALTHY"; else print "WARNING"}'
+printf "Message Errors:\t\t"; sudo tail -50 /var/log/messages|egrep -i "warning|error" | wc -l | awk '{if($1 == 0) print "HEALTHY"; else print "WARNING"}'
