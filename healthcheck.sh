@@ -50,7 +50,7 @@ ps -eo pid,ppid,cmd,%mem --sort=-%mem | head
 banner "NTP and synchronization"
 printf "NTP information:\t"; ntpstat | awk 'NR==1 {print $0}'
 printf "NTP lead field:\t\t"; ntpq -c rv | awk 'NR==1 {print $3}'
-printf "NTP reach value:\t\t"; ntpq -p | awk 'NR==4 {print $7}'
+printf "NTP reach value:\t"; ntpq -p | awk 'NR==4 {print $7}'
 separator
 printf "\t\t Time and Date status\n"
 timedatectl
@@ -92,6 +92,7 @@ printf "Time UP:\t\t"; uptime|sed 's/.*up \([^,]*\), .*/\1/' | awk '{if ($1 > 0)
 printf "CPU Utilization:\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Average://g" | grep -w "all" | awk '{print $NF}' | awk -F'.' '{print(100 -$1)}' | awk '{if($1 < 70) print "HEALTHY"; else print "WARNING"}'
 printf "Memory Utilization:\t"; vmstat -s | grep -w "used memory" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 700) print "HEALTHY"; else print "WARNING"}'
 printf "SWAP Usage:\t\t"; vmstat -s | grep -w "used swap" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 20) print "HEALTHY"; else print "WARNING" }'
+printf "Load Average:\t\t"; uptime|grep -o "load average.*"|awk '{print  $3}' | sed 's/,$//' | awk '{if($1 <= 15) print "HEALTHY"; else print "WARNING" }'
 printf "NTP Sincronization:\t"; ntpq -p | awk 'NR==4 {print $7}' | awk '{if($1 == 377) print "HEALTHY"; else print "WARNING"}'
 printf "Network Errors:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4;sum += $8} END {print sum}' | awk '{if($1 == 0) print "HEALTHY"; else print "WARNING"}'
 printf "Disk Space Usage:\t"; df -Ph|egrep -v "^Filesystem|mnt|tmp" | awk '{print $5,$6}' |sort -n |tail -1 | awk '{if($1 <=80) print "HEALTHY"; else print "WARNING"}'
