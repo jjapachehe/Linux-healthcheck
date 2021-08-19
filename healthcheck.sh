@@ -47,6 +47,21 @@ ps -eo pid,ppid,cmd,%cpu --sort=-%cpu | head
 separator
 printf "\t\tTop process Memory\n"
 ps -eo pid,ppid,cmd,%mem --sort=-%mem | head
+separator
+banner "Check zombie process"
+num_zomb_proc=$(ps -eo stat|grep -w Z | wc -l)
+if [ $num_zomb_proc -gt 0 ]; then
+    printf "Number of zombie process:\t\t"; $num_zomb_proc
+    printf "Zombie process detail\n"
+    zomb_proc=$(ps -eo stat,pid|grep -w Z|awk '{print $2}')
+    for i in $(echo "$zomb_proc")
+    do 
+        ps -o pid,ppid,user,stat,args -p $i
+    done
+else
+    printf "Zombie process status:\t No zombie process\n"
+fi
+separator
 banner "NTP and synchronization"
 printf "NTP information:\t"; ntpstat | awk 'NR==1 {print $0}'
 printf "NTP lead field:\t\t"; ntpq -c rv | awk 'NR==1 {print $3}'
@@ -93,6 +108,7 @@ printf "CPU Utilization:\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Ave
 printf "Memory Utilization:\t"; vmstat -s | grep -w "used memory" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 700) print "HEALTHY"; else print "WARNING"}'
 printf "SWAP Usage:\t\t"; vmstat -s | grep -w "used swap" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 20) print "HEALTHY"; else print "WARNING" }'
 printf "Load Average:\t\t"; uptime|grep -o "load average.*"|awk '{print  $3}' | sed 's/,$//' | awk '{if($1 <= 15) print "HEALTHY"; else print "WARNING" }'
+printf "Zombie Process:\t\t"; if [ $num_zomb_proc -gt 0 ]; then printf "WARNING"; else printf "HEALTHY\n"; fi
 printf "NTP Sincronization:\t"; ntpq -p | awk 'NR==4 {print $7}' | awk '{if($1 == 377) print "HEALTHY"; else print "WARNING"}'
 printf "Network Errors:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4;sum += $8} END {print sum}' | awk '{if($1 == 0) print "HEALTHY"; else print "WARNING"}'
 printf "Disk Space Usage:\t"; df -Ph|egrep -v "^Filesystem|mnt|tmp" | awk '{print $5,$6}' |sort -n |tail -1 | awk '{if($1 <=80) print "HEALTHY"; else print "WARNING"}'
