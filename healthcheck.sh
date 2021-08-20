@@ -49,11 +49,11 @@ printf "\t\tTop process Memory\n"
 ps -eo pid,ppid,cmd,%mem --sort=-%mem | head
 separator
 banner "Check zombie process"
-num_zomb_proc=$(ps -eo stat|grep -w Z | wc -l)
+num_zomb_proc=$(ps -el | grep -i 'Z' | wc -l)
 if [ $num_zomb_proc -gt 0 ]; then
     printf "Number of zombie process:\t\t"; $num_zomb_proc
     printf "Zombie process detail\n"
-    zomb_proc=$(ps -eo stat,pid|grep -w Z|awk '{print $2}')
+    zomb_proc=$(ps -el |grep -w 'Z'|awk '{print $4}')
     for i in $(echo "$zomb_proc")
     do 
         ps -o pid,ppid,user,stat,args -p $i
