@@ -51,7 +51,7 @@ separator
 banner "Check zombie process"
 num_zomb_proc=$(ps -el | grep -i 'Z' | wc -l)
 if [ $num_zomb_proc -gt 0 ]; then
-    printf "Number of zombie process:\t\t"; $num_zomb_proc
+    printf "Number of zombie process:\t"; echo -e "$num_zomb_proc\n"
     printf "Zombie process detail\n"
     zomb_proc=$(ps -el |grep -w 'Z'|awk '{print $4}')
     for i in $(echo "$zomb_proc")
@@ -108,7 +108,7 @@ printf "CPU Utilization:\t"; mpstat -P ALL 1 5 -u | grep "^Average" | sed "s/Ave
 printf "Memory Utilization:\t"; vmstat -s | grep -w "used memory" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 700) print "HEALTHY"; else print "WARNING"}'
 printf "SWAP Usage:\t\t"; vmstat -s | grep -w "used swap" | awk '{printf(" %.0f", $1/1024/1024)}' | awk '{if($1 < 20) print "HEALTHY"; else print "WARNING" }'
 printf "Load Average:\t\t"; uptime|grep -o "load average.*"|awk '{print  $3}' | sed 's/,$//' | awk '{if($1 <= 15) print "HEALTHY"; else print "WARNING" }'
-printf "Zombie Process:\t\t"; if [ $num_zomb_proc -gt 0 ]; then printf "WARNING"; else printf "HEALTHY\n"; fi
+printf "Zombie Process:\t\t"; if [ $num_zomb_proc -gt 0 ]; then printf "WARNING\n"; else printf "HEALTHY\n"; fi
 printf "NTP Sincronization:\t"; ntpq -p | awk 'NR==4 {print $7}' | awk '{if($1 == 377) print "HEALTHY"; else print "WARNING"}'
 printf "Network Errors:\t\t"; netstat -i|egrep -v "Iface|statistics"|awk '{sum += $4;sum += $8} END {print sum}' | awk '{if($1 == 0) print "HEALTHY"; else print "WARNING"}'
 printf "Disk Space Usage:\t"; df -Ph|egrep -v "^Filesystem|mnt|tmp" | awk '{print $5,$6}' |sort -n |tail -1 | awk '{if($1 <=80) print "HEALTHY"; else print "WARNING"}'
